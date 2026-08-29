@@ -1,0 +1,30 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+
+# Virtual Environment
+.venv/
+env/
+venv/
+
+# Environment variables / secrets
+.env
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# uv lock file (optional)
+uv.lockt a s k s . d b
+
