@@ -25,6 +25,8 @@ venv/
 .DS_Store
 Thumbs.db
 
+documents/
+
 # uv lock file (optional)
 uv.lockt a s k s . d b
 

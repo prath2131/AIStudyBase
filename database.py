@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import List, Optional
 from sqlmodel import Session, SQLModel, create_engine, Field, Relationship
 import os
@@ -14,6 +15,7 @@ class Document(SQLModel, table= True):
     filename: str
     pages: List["Page"] = Relationship(back_populates="document")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    owner_id: UUID
 
 
 class Page(SQLModel, table= True):
@@ -22,6 +24,7 @@ class Page(SQLModel, table= True):
     page_number: int
     text: str
     document: Optional[Document] = Relationship(back_populates="pages")
+
 
 
 def create_db_and_tables():
