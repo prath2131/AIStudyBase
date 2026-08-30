@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import FastAPI, UploadFile, Depends, HTTPException
+from fastapi import FastAPI, UploadFile, Depends, HTTPException, Response
 from fastapi.responses import JSONResponse
 from database import engine, create_db_and_tables, Document, Page
 from pypdf import PdfReader
@@ -7,29 +7,12 @@ from sqlmodel import Session, select
 from pydantic import BaseModel
 from fastapi.security import HTTPBearer
 from uuid import UUID
-
-# supabase setup
-from supabase import Client, create_client
+from auth import supabase
 from supabase_auth.errors import AuthApiError
-from dotenv import load_dotenv
-import os
+from pdf_generate import generate_report
 
 app = FastAPI()
 security = HTTPBearer()
-
-load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-PORT = int(os.getenv("PORT", 8000))
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError(
-        "Missing SUPABASE_URL or SUPABASE_KEY. Did you create a .env file? "
-        "See .env.example for the expected format."
-    )
-supabase: Client = create_client(
-    SUPABASE_URL,
-    SUPABASE_KEY
-)
 
 
 # creating a database session dependency in FastAPI using engine.
@@ -181,6 +164,18 @@ def get_document(
     return document
 
 
-@app.get("/debug/db")
-def debug_db():
-    return {"db_url": str(engine.url)}
+@app.get("/reports")
+def get_report(
+        session: SessionDep,
+        current_userid: str = Depends(get_current_user)
+):
+    statement = select(Document).where(Document.owner_id == UUID(current_userid))
+    documents = session.exec(statement).all()
+    pdf_bytes = generate_report(documents)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "attachment; filename=study_report.pdf"
+        }
+    )

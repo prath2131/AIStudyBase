@@ -26,7 +26,6 @@ class Page(SQLModel, table= True):
     document: Optional[Document] = Relationship(back_populates="pages")
 
 
-
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
