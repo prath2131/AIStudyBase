@@ -101,7 +101,7 @@ This is a persistent study companion. Upload PDF chapters, articles, or syllabi 
 
 ---
 
-## What I noticed while building this (per M3 checkpoint)
+## What I noticed while building this (concept 3 checkpoint)
 
 - The RAG pipeline works correctly end-to-end: a question about market size returned a correct, cited answer from the right page.
 - When asked something with no answer in the material (e.g. "who is the CEO"), the model correctly said the material didn't contain a clear answer, instead of guessing — the "what to do when unsure" instruction in the prompt held up.
