@@ -4,6 +4,8 @@ from sqlmodel import Session, SQLModel, create_engine, Field, Relationship
 import os
 from dotenv import load_dotenv
 from datetime import datetime,timezone
+from sqlalchemy import Column, Computed, Index
+from sqlalchemy.dialects.postgresql import TSVECTOR
 
 load_dotenv()
 DATABASE_URL = os.environ["DATABASE_URL"]
@@ -24,6 +26,20 @@ class Page(SQLModel, table= True):
     page_number: int
     text: str
     document: Optional[Document] = Relationship(back_populates="pages")
+    search_vector: Optional[str] = Field(
+        default=None,
+        sa_column=Column(
+            TSVECTOR,
+            Computed("to_tsvector('english', text)", persisted=True)
+        )
+    )
+    __table_args__ = (
+        Index(
+            "ix_page_search_vector",
+            "search_vector",
+            postgresql_using="gin"
+        ),
+    )
 
 
 def create_db_and_tables():

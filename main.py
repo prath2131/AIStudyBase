@@ -10,6 +10,9 @@ from uuid import UUID
 from auth import supabase
 from supabase_auth.errors import AuthApiError
 from pdf_generate import generate_report
+from sqlalchemy import func
+from client import call_model, ASK_PROMPT
+
 
 app = FastAPI()
 security = HTTPBearer()
@@ -96,6 +99,21 @@ class AuthRequest(BaseModel):
     password: str | None = None
 
 
+class AskRequest(BaseModel):
+    question: str
+
+
+class Citation(BaseModel):
+    document_id: int
+    filename: str
+    page_number: int
+
+
+class AskResponse(BaseModel):
+    answer: str
+    citations: list[Citation]
+
+
 @app.post(
     "/auth/signup",
     status_code=201,
@@ -179,3 +197,46 @@ def get_report(
             "Content-Disposition": "attachment; filename=study_report.pdf"
         }
     )
+
+
+@app.post("/ask/")
+def query_document(
+    request: AskRequest,
+    session: SessionDep,
+    current_userid: str = Depends(get_current_user)
+):
+    words = request.question.split()
+    query = func.websearch_to_tsquery("english", " OR ".join(words))
+    rank = func.ts_rank(Page.search_vector, query).label("rank")
+    statement = (
+        select(Page, Document, rank)
+        .join(Document)
+        .where(
+            Document.owner_id == UUID(current_userid),
+            Page.search_vector.op("@@")(query)
+        )
+        .order_by(rank.desc())
+        .limit(3)
+    )
+    results = session.exec(statement).all()
+    if not results:
+        return AskResponse(answer="No relevant material found in your library.", citations=[])
+
+    excerpt_blocks = []
+    citations = []
+    for page, document, _rank in results:
+        excerpt_blocks.append(f"[{document.filename}, page {page.page_number}]\n{page.text}")
+        citations.append(Citation(
+            document_id=document.id,
+            filename=document.filename,
+            page_number=page.page_number
+        ))
+    excerpts = "\n\n".join(excerpt_blocks)
+
+    messages = [
+        {"role": "system", "content": ASK_PROMPT},
+        {"role": "user", "content": f"Excerpts:\n{excerpts}\n\nQuestion: {request.question}"}
+    ]
+
+    answer = call_model(messages)
+    return AskResponse(answer=answer, citations=citations)
